@@ -6,47 +6,47 @@
 
 @layer base {
   :root {
-    --background: 30 15% 8%;
-    --foreground: 40 30% 93%;
+    --background: 45 38% 93%;
+    --foreground: 220 40% 22%;
 
-    --card: 30 12% 12%;
-    --card-foreground: 40 30% 93%;
+    --card: 45 30% 97%;
+    --card-foreground: 220 40% 22%;
 
-    --popover: 30 12% 12%;
-    --popover-foreground: 40 30% 93%;
+    --popover: 45 30% 97%;
+    --popover-foreground: 220 40% 22%;
 
-    --primary: 38 92% 50%;
-    --primary-foreground: 30 15% 8%;
+    --primary: 22 72% 35%;
+    --primary-foreground: 45 50% 96%;
 
-    --secondary: 30 10% 18%;
-    --secondary-foreground: 40 30% 90%;
+    --secondary: 45 18% 86%;
+    --secondary-foreground: 220 40% 22%;
 
-    --muted: 30 8% 20%;
-    --muted-foreground: 30 10% 55%;
+    --muted: 45 18% 86%;
+    --muted-foreground: 220 15% 50%;
 
-    --accent: 24 85% 55%;
-    --accent-foreground: 30 15% 8%;
+    --accent: 22 55% 45%;
+    --accent-foreground: 45 50% 96%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 30 10% 22%;
-    --input: 30 10% 22%;
-    --ring: 38 92% 50%;
+    --border: 45 15% 80%;
+    --input: 45 15% 80%;
+    --ring: 22 72% 35%;
 
     --radius: 0.75rem;
 
-    --success: 142 70% 45%;
-    --success-foreground: 142 70% 95%;
+    --success: 152 55% 38%;
+    --success-foreground: 152 55% 96%;
 
     --font-display: 'Fredoka', sans-serif;
     --font-body: 'Inter', sans-serif;
 
-    --grid-cell: 30 12% 15%;
-    --grid-cell-hover: 38 40% 25%;
-    --grid-cell-selected: 38 92% 50%;
-    --grid-cell-found: 142 70% 40%;
-    --grid-cell-found-text: 142 70% 95%;
+    --grid-cell: 45 20% 89%;
+    --grid-cell-hover: 22 25% 82%;
+    --grid-cell-selected: 22 72% 35%;
+    --grid-cell-found: 152 55% 38%;
+    --grid-cell-found-text: 0 0% 100%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -92,8 +92,8 @@
   }
 
   .grid-cell-selected {
-    @apply bg-primary text-primary-foreground scale-110 shadow-lg;
-    box-shadow: 0 0 12px hsl(var(--primary) / 0.4);
+    @apply bg-primary text-primary-foreground scale-110;
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.35);
   }
 
   .grid-cell-found {
@@ -101,11 +101,11 @@
   }
 
   .glow-primary {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.1);
+    box-shadow: 0 0 15px hsl(var(--primary) / 0.2), 0 0 40px hsl(var(--primary) / 0.08);
   }
 
   .glow-success {
-    box-shadow: 0 0 20px hsl(var(--success) / 0.3), 0 0 60px hsl(var(--success) / 0.1);
+    box-shadow: 0 0 15px hsl(var(--success) / 0.25), 0 0 40px hsl(var(--success) / 0.1);
   }
 }
 
@@ -129,10 +129,10 @@
 
 @keyframes winner-glow {
   0%, 100% {
-    text-shadow: 0 0 10px hsl(38 92% 50% / 0.5), 0 0 30px hsl(38 92% 50% / 0.3);
+    text-shadow: 0 0 8px hsl(22 72% 35% / 0.4), 0 0 20px hsl(22 72% 35% / 0.2);
   }
   50% {
-    text-shadow: 0 0 20px hsl(38 92% 50% / 0.8), 0 0 50px hsl(38 92% 50% / 0.5), 0 0 80px hsl(38 92% 50% / 0.2);
+    text-shadow: 0 0 15px hsl(22 72% 35% / 0.6), 0 0 35px hsl(22 72% 35% / 0.3), 0 0 60px hsl(22 72% 35% / 0.15);
   }
 }
 

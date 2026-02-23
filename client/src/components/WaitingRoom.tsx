@@ -100,7 +100,7 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
                 size={160}
                 level="M"
                 bgColor="#ffffff"
-                fgColor="#000000"
+                fgColor="#223150"
               />
             </div>
           </div>

@@ -201,7 +201,7 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
       {gameOver && (
         <>
           {winnerName && <Confetti />}
-          <div className="fixed inset-0 bg-background/85 backdrop-blur-sm flex items-center justify-center z-50 animate-pop-in">
+          <div className="fixed inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-50 animate-pop-in">
             <div className={`bg-card border-2 rounded-2xl p-8 max-w-sm w-full mx-4 text-center ${
               winnerName ? 'border-primary glow-success' : 'border-destructive'
             }`}>

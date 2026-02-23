@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+const COLORS = ['#9b4819', '#c96b3c', '#d4956a', '#223150', '#3a5278', '#e8b44c', '#d45b3f', '#6b8e5e', '#c4813a', '#7a9ec4'];
 const SHAPES = ['circle', 'square', 'triangle'] as const;
 
 interface Particle {
