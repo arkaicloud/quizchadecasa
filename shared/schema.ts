@@ -2,7 +2,7 @@ import { pgTable, text, uuid, boolean, timestamp, jsonb } from "drizzle-orm/pg-c
 import { sql } from "drizzle-orm";
 
 export const gameRooms = pgTable("game_rooms", {
-  id: text("id").primaryKey().default(sql`substr(md5(random()::text), 1, 6)`),
+  id: text("id").primaryKey().default(sql`substr(md5(random()::text), 1, 3)`),
   grid: jsonb("grid").notNull(),
   placedWords: jsonb("placed_words").notNull(),
   words: text("words").array().notNull(),
