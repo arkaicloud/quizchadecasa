@@ -4,7 +4,8 @@ import { cellKey, PlacedWord } from '@/lib/wordSearchGenerator';
 import WordGrid from '@/components/WordGrid';
 import WordList from '@/components/WordList';
 import GameTimer from '@/components/GameTimer';
-import { Search, Trophy, Clock, RotateCcw, Users } from 'lucide-react';
+import Confetti from '@/components/Confetti';
+import { Search, Trophy, Clock, RotateCcw, Users, Medal, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const GAME_DURATION = 180;
@@ -39,6 +40,7 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
   const [winnerName, setWinnerName] = useState<string | null>(null);
   const [players, setPlayers] = useState<PlayerProgress[]>([]);
   const [timerKey, setTimerKey] = useState(0);
+  const [showRanking, setShowRanking] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -116,6 +118,10 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
     }
   }, [gameOver, isAdmin, roomId]);
 
+  const rankedPlayers = useMemo(() => {
+    return [...players].sort((a, b) => (b.wordsFound?.length || 0) - (a.wordsFound?.length || 0));
+  }, [players]);
+
   if (!grid.length) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -170,9 +176,7 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
                 <h2 className="font-display font-bold text-lg text-foreground">Placar</h2>
               </div>
               <ul className="space-y-2">
-                {players
-                  .sort((a, b) => (b.wordsFound?.length || 0) - (a.wordsFound?.length || 0))
-                  .map((p) => (
+                {rankedPlayers.map((p) => (
                     <li key={p.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50" data-testid={`row-player-${p.id}`}>
                       <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
                         <span className="font-display font-bold text-primary text-xs">
@@ -195,40 +199,135 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
       </main>
 
       {gameOver && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 animate-pop-in">
-          <div className={`bg-card border-2 rounded-2xl p-8 max-w-sm w-full mx-4 text-center ${
-            winnerName ? 'border-success glow-success' : 'border-destructive'
-          }`}>
-            <div className="mb-4">
-              {winnerName ? (
-                <Trophy className="w-16 h-16 text-primary mx-auto animate-pop-in" />
+        <>
+          {winnerName && <Confetti />}
+          <div className="fixed inset-0 bg-background/85 backdrop-blur-sm flex items-center justify-center z-50 animate-pop-in">
+            <div className={`bg-card border-2 rounded-2xl p-8 max-w-sm w-full mx-4 text-center ${
+              winnerName ? 'border-primary glow-success' : 'border-destructive'
+            }`}>
+
+              {!showRanking ? (
+                <>
+                  <div className="mb-4">
+                    {winnerName ? (
+                      <div className="relative inline-block">
+                        <Trophy className="w-20 h-20 text-primary mx-auto animate-pop-in" />
+                        <Crown className="w-8 h-8 text-yellow-400 absolute -top-3 left-1/2 -translate-x-1/2 animate-pop-in" style={{ animationDelay: '0.2s' }} />
+                      </div>
+                    ) : (
+                      <Clock className="w-20 h-20 text-destructive mx-auto" />
+                    )}
+                  </div>
+
+                  {winnerName ? (
+                    <>
+                      <h2 className="font-display font-bold text-2xl text-foreground mb-3">
+                        Fim de Jogo!
+                      </h2>
+                      <div className="bg-primary/10 border border-primary/30 rounded-xl py-4 px-6 mb-4">
+                        <p className="text-sm text-primary/80 font-body mb-1">Vencedor</p>
+                        <p className="font-display font-bold text-3xl text-primary winner-glow">
+                          {winnerName}
+                        </p>
+                        {winnerName === playerName && (
+                          <p className="text-sm text-primary font-body mt-1">Parabéns, você venceu!</p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="font-display font-bold text-2xl text-foreground mb-2">
+                        Tempo Esgotado!
+                      </h2>
+                      <p className="text-muted-foreground font-body mb-4">
+                        Ninguém encontrou todas as palavras a tempo.
+                      </p>
+                    </>
+                  )}
+
+                  <p className="font-display font-bold text-lg text-primary mb-5">
+                    Você: {foundWords.size}/{words.length} palavras
+                  </p>
+
+                  <div className="space-y-2">
+                    <Button
+                      data-testid="button-show-ranking"
+                      onClick={() => setShowRanking(true)}
+                      className="w-full gap-2 font-display font-bold text-lg py-6"
+                    >
+                      <Medal className="w-5 h-5" />
+                      Ver Ranking
+                    </Button>
+                    <Button
+                      data-testid="button-back-lobby"
+                      onClick={onBackToLobby}
+                      variant="secondary"
+                      className="w-full gap-2 font-display font-semibold py-5"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                      Voltar ao Lobby
+                    </Button>
+                  </div>
+                </>
               ) : (
-                <Clock className="w-16 h-16 text-destructive mx-auto" />
+                <>
+                  <div className="flex items-center justify-center gap-2 mb-5">
+                    <Medal className="w-7 h-7 text-primary" />
+                    <h2 className="font-display font-bold text-2xl text-foreground">
+                      Ranking Final
+                    </h2>
+                  </div>
+
+                  <ul className="space-y-2 mb-6">
+                    {rankedPlayers.map((p, index) => {
+                      const medalColors = ['text-yellow-400', 'text-gray-400', 'text-amber-600'];
+                      return (
+                        <li
+                          key={p.id}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                            index === 0 ? 'bg-primary/15 border border-primary/30' : 'bg-muted/50'
+                          }`}
+                          data-testid={`ranking-player-${p.id}`}
+                        >
+                          <span className={`font-display font-bold text-xl w-7 text-center ${
+                            index < 3 ? medalColors[index] : 'text-muted-foreground'
+                          }`}>
+                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
+                          </span>
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                            <span className="font-display font-bold text-primary text-sm">
+                              {p.name[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                          <span className={`font-body flex-1 text-left ${
+                            index === 0 ? 'font-bold text-primary' : 'text-foreground'
+                          }`}>
+                            {p.name}
+                            {p.id === playerId && <span className="text-muted-foreground text-xs"> (você)</span>}
+                          </span>
+                          <span className={`font-display font-bold text-sm ${
+                            index === 0 ? 'text-primary' : 'text-muted-foreground'
+                          }`}>
+                            {p.wordsFound?.length || 0}/{words.length}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <Button
+                    data-testid="button-back-lobby"
+                    onClick={onBackToLobby}
+                    className="w-full gap-2 font-display font-bold text-lg py-6"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    Voltar ao Lobby
+                  </Button>
+                </>
               )}
             </div>
-            <h2 className="font-display font-bold text-3xl text-foreground mb-2">
-              {winnerName ? 'Fim de Jogo!' : 'Tempo Esgotado!'}
-            </h2>
-            <p className="text-muted-foreground font-body mb-1">
-              {winnerName
-                ? winnerName === playerName
-                  ? 'Você venceu! Parabéns!'
-                  : `${winnerName} encontrou todas as palavras!`
-                : 'Ninguém encontrou todas as palavras a tempo.'}
-            </p>
-            <p className="font-display font-bold text-xl text-primary mb-6">
-              Você: {foundWords.size}/{words.length} palavras
-            </p>
-            <Button
-              data-testid="button-back-lobby"
-              onClick={onBackToLobby}
-              className="w-full gap-2 font-display font-bold text-lg py-6"
-            >
-              <RotateCcw className="w-5 h-5" />
-              Voltar ao Lobby
-            </Button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

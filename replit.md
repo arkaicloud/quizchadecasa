@@ -52,4 +52,4 @@ shared/                 # Shared code
 1. **Lobby**: Player enters name, creates or joins a room
 2. **Waiting Room**: Players wait, admin starts the game (polling every 1.5s)
 3. **Playing**: 180s timer, drag-to-select words on 12x12 grid, scoreboard polls every 2s
-4. **Game Over**: Shows winner or timeout result
+4. **Game Over**: Shows winner with confetti animation and glowing name, or timeout result. "Ver Ranking" button shows final player ranking with medals. "Voltar ao Lobby" returns to main screen.

@@ -108,3 +108,34 @@
     box-shadow: 0 0 20px hsl(var(--success) / 0.3), 0 0 60px hsl(var(--success) / 0.1);
   }
 }
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--drift-x, 20px)) rotate(var(--rotation, 720deg));
+    opacity: 0;
+  }
+}
+
+.confetti-particle {
+  animation: confetti-fall 3.5s ease-in forwards;
+}
+
+@keyframes winner-glow {
+  0%, 100% {
+    text-shadow: 0 0 10px hsl(38 92% 50% / 0.5), 0 0 30px hsl(38 92% 50% / 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px hsl(38 92% 50% / 0.8), 0 0 50px hsl(38 92% 50% / 0.5), 0 0 80px hsl(38 92% 50% / 0.2);
+  }
+}
+
+.winner-glow {
+  animation: winner-glow 2s ease-in-out infinite;
+}
