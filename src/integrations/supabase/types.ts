@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_players: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+          name: string
+          room_id: string
+          words_found: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          name: string
+          room_id: string
+          words_found?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          name?: string
+          room_id?: string
+          words_found?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "game_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_rooms: {
+        Row: {
+          admin_player_id: string | null
+          created_at: string
+          grid: Json
+          id: string
+          placed_words: Json
+          status: string
+          winner_name: string | null
+          words: string[]
+        }
+        Insert: {
+          admin_player_id?: string | null
+          created_at?: string
+          grid: Json
+          id?: string
+          placed_words: Json
+          status?: string
+          winner_name?: string | null
+          words: string[]
+        }
+        Update: {
+          admin_player_id?: string | null
+          created_at?: string
+          grid?: Json
+          id?: string
+          placed_words?: Json
+          status?: string
+          winner_name?: string | null
+          words?: string[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
