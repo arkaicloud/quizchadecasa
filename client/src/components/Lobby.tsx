@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { generateWordSearch } from '@/lib/wordSearchGenerator';
@@ -18,6 +18,16 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
   const [mode, setMode] = useState<'choose' | 'join'>('choose');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+    if (roomParam) {
+      setRoomCode(roomParam);
+      setMode('join');
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   const trimmedName = name.trim().slice(0, 30);
 
@@ -143,7 +153,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
                   data-testid="input-room-code"
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value)}
-                  placeholder="Ex: a1b2c3"
+                  placeholder="Ex: a1b"
                   maxLength={10}
                   className="bg-muted border-border font-body"
                 />

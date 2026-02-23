@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { apiRequest } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Users, Play, Copy, Check } from 'lucide-react';
@@ -30,6 +31,8 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const onGameStartRef = useRef(onGameStart);
   onGameStartRef.current = onGameStart;
 
+  const joinUrl = `${window.location.origin}?room=${roomId}`;
+
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
@@ -57,7 +60,7 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
   }, [roomId]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(roomId);
+    navigator.clipboard.writeText(joinUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -87,6 +90,19 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
             <Button variant="ghost" size="icon" onClick={handleCopy} data-testid="button-copy-code">
               {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
             </Button>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-muted-foreground font-body">Escaneie para entrar</p>
+            <div className="bg-white p-3 rounded-xl">
+              <QRCodeSVG
+                value={joinUrl}
+                size={160}
+                level="M"
+                bgColor="#ffffff"
+                fgColor="#000000"
+              />
+            </div>
           </div>
 
           <div>

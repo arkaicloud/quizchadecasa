@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { cellKey, getCellsBetween, checkSelection, PlacedWord } from '@/lib/wordSearchGenerator';
 
 interface WordGridProps {
@@ -21,6 +21,7 @@ const WordGrid: React.FC<WordGridProps> = ({
   const [dragStart, setDragStart] = useState<{ row: number; col: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ row: number; col: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const selectedCells = dragStart && dragEnd
     ? getCellsBetween(dragStart, dragEnd)
@@ -28,17 +29,30 @@ const WordGrid: React.FC<WordGridProps> = ({
 
   const selectedKeys = new Set(selectedCells.map(c => cellKey(c.row, c.col)));
 
-  const handlePointerDown = useCallback((row: number, col: number) => {
+  const getCellFromPoint = useCallback((x: number, y: number): { row: number; col: number } | null => {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const row = el.getAttribute('data-row');
+    const col = el.getAttribute('data-col');
+    if (row === null || col === null) return null;
+    return { row: parseInt(row), col: parseInt(col) };
+  }, []);
+
+  const handlePointerDown = useCallback((row: number, col: number, e: React.PointerEvent) => {
     if (disabled) return;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     setDragStart({ row, col });
     setDragEnd({ row, col });
     setIsDragging(true);
   }, [disabled]);
 
-  const handlePointerEnter = useCallback((row: number, col: number) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging || disabled) return;
-    setDragEnd({ row, col });
-  }, [isDragging, disabled]);
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (cell) {
+      setDragEnd(cell);
+    }
+  }, [isDragging, disabled, getCellFromPoint]);
 
   const handlePointerUp = useCallback(() => {
     if (!isDragging || disabled) return;
@@ -57,12 +71,16 @@ const WordGrid: React.FC<WordGridProps> = ({
 
   return (
     <div
-      className="inline-grid gap-1 p-3 rounded-xl bg-card border border-border glow-primary select-none touch-none"
+      ref={gridRef}
+      className="inline-grid gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl bg-card border border-border glow-primary select-none"
       style={{
         gridTemplateColumns: `repeat(${grid[0]?.length || 12}, minmax(0, 1fr))`,
+        touchAction: 'none',
       }}
+      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {grid.map((row, r) =>
         row.map((letter, c) => {
@@ -73,12 +91,13 @@ const WordGrid: React.FC<WordGridProps> = ({
           return (
             <div
               key={key}
-              onPointerDown={() => handlePointerDown(r, c)}
-              onPointerEnter={() => handlePointerEnter(r, c)}
+              data-row={r}
+              data-col={c}
+              onPointerDown={(e) => handlePointerDown(r, c, e)}
               className={`
-                w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11
+                w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11
                 flex items-center justify-center
-                rounded-md font-display font-bold text-sm sm:text-base md:text-lg
+                rounded-md font-display font-bold text-xs sm:text-sm md:text-lg
                 transition-all duration-150
                 ${isFound
                   ? 'grid-cell-found'
