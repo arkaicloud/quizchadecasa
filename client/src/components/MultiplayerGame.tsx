@@ -8,7 +8,7 @@ import Confetti from '@/components/Confetti';
 import { Search, Trophy, Clock, RotateCcw, Users, Medal, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const GAME_DURATION = 180;
+const GAME_DURATION = 300;
 
 interface MultiplayerGameProps {
   roomId: string;
