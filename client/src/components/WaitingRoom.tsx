@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState, useRef } from 'react';
+import { apiRequest } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Users, Play, Copy, Check } from 'lucide-react';
 
 interface Player {
   id: string;
   name: string;
-  is_admin: boolean;
+  isAdmin: boolean;
 }
 
 interface WaitingRoomProps {
@@ -27,49 +27,34 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const [players, setPlayers] = useState<Player[]>([]);
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
+  const onGameStartRef = useRef(onGameStart);
+  onGameStartRef.current = onGameStart;
 
-  // Fetch initial players
   useEffect(() => {
     const fetchPlayers = async () => {
-      const { data } = await supabase
-        .from('game_players')
-        .select('id, name, is_admin')
-        .eq('room_id', roomId)
-        .order('created_at');
-      if (data) setPlayers(data);
+      try {
+        const data = await apiRequest('GET', `/api/rooms/${roomId}/players`);
+        setPlayers(data);
+      } catch {}
     };
     fetchPlayers();
   }, [roomId]);
 
-  // Subscribe to new players joining
   useEffect(() => {
-    const channel = supabase
-      .channel(`waiting-${roomId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'game_players', filter: `room_id=eq.${roomId}` },
-        (payload) => {
-          const p = payload.new as any;
-          setPlayers(prev => {
-            if (prev.find(x => x.id === p.id)) return prev;
-            return [...prev, { id: p.id, name: p.name, is_admin: p.is_admin }];
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'game_rooms', filter: `id=eq.${roomId}` },
-        (payload) => {
-          const room = payload.new as any;
-          if (room.status === 'playing') {
-            onGameStart();
-          }
-        }
-      )
-      .subscribe();
+    const interval = setInterval(async () => {
+      try {
+        const data = await apiRequest('GET', `/api/rooms/${roomId}/players`);
+        setPlayers(data);
 
-    return () => { supabase.removeChannel(channel); };
-  }, [roomId, onGameStart]);
+        const room = await apiRequest('GET', `/api/rooms/${roomId}`);
+        if (room.status === 'playing') {
+          onGameStartRef.current();
+        }
+      } catch {}
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [roomId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(roomId);
@@ -79,7 +64,7 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
   const handleStart = async () => {
     setStarting(true);
-    await supabase.from('game_rooms').update({ status: 'playing' }).eq('id', roomId);
+    await apiRequest('PATCH', `/api/rooms/${roomId}`, { status: 'playing' });
   };
 
   return (
@@ -94,18 +79,16 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
-          {/* Room code */}
           <div className="flex items-center gap-2 bg-muted rounded-xl p-3">
             <div className="flex-1">
               <p className="text-xs text-muted-foreground font-body">Código da sala</p>
-              <p className="font-display font-bold text-xl text-primary tracking-wider">{roomId}</p>
+              <p className="font-display font-bold text-xl text-primary tracking-wider" data-testid="text-room-code">{roomId}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleCopy}>
+            <Button variant="ghost" size="icon" onClick={handleCopy} data-testid="button-copy-code">
               {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
             </Button>
           </div>
 
-          {/* Player list */}
           <div>
             <p className="font-display font-semibold text-sm text-foreground mb-2">
               Jogadores ({players.length})
@@ -115,6 +98,7 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
                 <li
                   key={p.id}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50"
+                  data-testid={`card-player-${p.id}`}
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                     <span className="font-display font-bold text-primary text-sm">
@@ -122,7 +106,7 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
                     </span>
                   </div>
                   <span className="font-body text-foreground flex-1">{p.name}</span>
-                  {p.is_admin && (
+                  {p.isAdmin && (
                     <span className="text-xs font-display font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                       Admin
                     </span>
@@ -135,9 +119,9 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
             </ul>
           </div>
 
-          {/* Start button for admin */}
           {isAdmin && (
             <Button
+              data-testid="button-start-game"
               onClick={handleStart}
               disabled={starting || players.length < 1}
               className="w-full gap-2 font-display font-bold text-lg py-6"

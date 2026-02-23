@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
 import { generateWordSearch } from '@/lib/wordSearchGenerator';
+import { apiRequest } from '@/lib/api';
 import { Search, Users, Plus, LogIn } from 'lucide-react';
 
 const WORDS = ['SUZANO', 'TATUI', 'FAMILIA', 'MEMORIAS', 'GRATIDAO', 'FUTURO', 'SETEANOS'];
@@ -27,26 +27,21 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
     setError('');
     try {
       const gameData = generateWordSearch(WORDS, GRID_SIZE);
-      const { data: room, error: roomErr } = await supabase
-        .from('game_rooms')
-        .insert({
-          grid: gameData.grid as any,
-          placed_words: gameData.placedWords as any,
-          words: WORDS,
-          status: 'waiting',
-        })
-        .select('id')
-        .single();
-      if (roomErr || !room) throw roomErr;
+      const room = await apiRequest('POST', '/api/rooms', {
+        grid: gameData.grid,
+        placedWords: gameData.placedWords,
+        words: WORDS,
+      });
 
-      const { data: player, error: playerErr } = await supabase
-        .from('game_players')
-        .insert({ room_id: room.id, name: trimmedName, is_admin: true })
-        .select('id')
-        .single();
-      if (playerErr || !player) throw playerErr;
+      const player = await apiRequest('POST', '/api/players', {
+        roomId: room.id,
+        name: trimmedName,
+        isAdmin: true,
+      });
 
-      await supabase.from('game_rooms').update({ admin_player_id: player.id }).eq('id', room.id);
+      await apiRequest('PATCH', `/api/rooms/${room.id}`, {
+        adminPlayerId: player.id,
+      });
 
       onJoined(room.id, player.id, trimmedName, true);
     } catch (e: any) {
@@ -63,20 +58,21 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
     setLoading(true);
     setError('');
     try {
-      const { data: room, error: roomErr } = await supabase
-        .from('game_rooms')
-        .select('id, status')
-        .eq('id', code)
-        .single();
-      if (roomErr || !room) { setError('Sala não encontrada'); setLoading(false); return; }
+      let room;
+      try {
+        room = await apiRequest('GET', `/api/rooms/${code}`);
+      } catch {
+        setError('Sala não encontrada');
+        setLoading(false);
+        return;
+      }
       if (room.status === 'finished') { setError('Esta sala já terminou'); setLoading(false); return; }
 
-      const { data: player, error: playerErr } = await supabase
-        .from('game_players')
-        .insert({ room_id: room.id, name: trimmedName, is_admin: false })
-        .select('id')
-        .single();
-      if (playerErr || !player) throw playerErr;
+      const player = await apiRequest('POST', '/api/players', {
+        roomId: room.id,
+        name: trimmedName,
+        isAdmin: false,
+      });
 
       onJoined(room.id, player.id, trimmedName, false);
     } catch (e: any) {
@@ -93,7 +89,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="font-display font-bold text-3xl text-foreground mb-1">Caça-Palavras</h1>
+          <h1 className="font-display font-bold text-3xl text-foreground mb-1" data-testid="text-title">Caça-Palavras</h1>
           <p className="text-muted-foreground font-body">Multiplayer em tempo real</p>
         </div>
 
@@ -103,6 +99,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
               Seu Nome
             </label>
             <Input
+              data-testid="input-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Digite seu nome..."
@@ -112,12 +109,13 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
           </div>
 
           {error && (
-            <p className="text-destructive text-sm font-body">{error}</p>
+            <p className="text-destructive text-sm font-body" data-testid="text-error">{error}</p>
           )}
 
           {mode === 'choose' ? (
             <div className="space-y-3 pt-2">
               <Button
+                data-testid="button-create-room"
                 onClick={handleCreate}
                 disabled={loading}
                 className="w-full gap-2 font-display font-bold text-lg py-6"
@@ -126,6 +124,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
                 Criar Sala
               </Button>
               <Button
+                data-testid="button-join-mode"
                 onClick={() => setMode('join')}
                 variant="secondary"
                 className="w-full gap-2 font-display font-semibold py-5"
@@ -141,6 +140,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
                   Código da Sala
                 </label>
                 <Input
+                  data-testid="input-room-code"
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value)}
                   placeholder="Ex: a1b2c3"
@@ -149,6 +149,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
                 />
               </div>
               <Button
+                data-testid="button-join-room"
                 onClick={handleJoin}
                 disabled={loading}
                 className="w-full gap-2 font-display font-bold text-lg py-6"
@@ -157,6 +158,7 @@ const Lobby: React.FC<LobbyProps> = ({ onJoined }) => {
                 Entrar
               </Button>
               <Button
+                data-testid="button-back"
                 onClick={() => setMode('choose')}
                 variant="ghost"
                 className="w-full font-body text-muted-foreground"
