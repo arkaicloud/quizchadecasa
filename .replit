@@ -8,8 +8,9 @@ channel = "stable-25_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["node", "./dist/index.cjs"]
+run = ["node", "--import", "tsx", "server/index.ts"]
 build = ["npm", "run", "build"]
+publicDir = "dist/public"
 
 [workflows]
 runButton = "Project"
@@ -42,3 +43,8 @@ externalPort = 80
 [[ports]]
 localPort = 24678
 externalPort = 3000
+
+[userenv]
+
+[userenv.production]
+NODE_ENV = "production"

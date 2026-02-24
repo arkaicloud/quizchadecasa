@@ -39,7 +39,14 @@ app.use((req, res, next) => {
 (async () => {
   registerRoutes(app);
 
-  const server = await setupVite(app);
+  const server = await (async () => {
+    if (process.env.NODE_ENV === "production") {
+      serveStatic(app);
+      const { createServer } = await import("http");
+      return createServer(app);
+    }
+    return setupVite(app);
+  })();
 
   const port = 5000;
   server.listen(port, "0.0.0.0", () => {
