@@ -10,9 +10,21 @@ import UnscrambleGame from '@/components/UnscrambleGame';
 type GameType = 'wordsearch' | 'unscramble';
 type GamePhase = 'menu' | 'lobby' | 'waiting' | 'playing';
 
+const getInitialState = (): { gameType: GameType | null; phase: GamePhase } => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('room')) {
+    return { gameType: 'wordsearch', phase: 'lobby' };
+  }
+  if (params.get('unscramble')) {
+    return { gameType: 'unscramble', phase: 'lobby' };
+  }
+  return { gameType: null, phase: 'menu' };
+};
+
 const Index = () => {
-  const [gameType, setGameType] = useState<GameType | null>(null);
-  const [phase, setPhase] = useState<GamePhase>('menu');
+  const initial = getInitialState();
+  const [gameType, setGameType] = useState<GameType | null>(initial.gameType);
+  const [phase, setPhase] = useState<GamePhase>(initial.phase);
   const [roomId, setRoomId] = useState('');
   const [playerId, setPlayerId] = useState('');
   const [playerName, setPlayerName] = useState('');
@@ -42,6 +54,7 @@ const Index = () => {
     setPlayerId('');
     setPlayerName('');
     setIsAdmin(false);
+    window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
   const handleBackToLobby = useCallback(() => {
