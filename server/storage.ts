@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "./db";
 import {
-  gameRooms, gamePlayers,
+  gameRooms, gamePlayers, gameRankings,
   unscrambleRooms, unscramblePlayers,
   type InsertGameRoom, type InsertGamePlayer, type GameRoom, type GamePlayer,
+  type InsertGameRanking, type GameRanking,
   type InsertUnscrambleRoom, type InsertUnscramblePlayer, type UnscrambleRoom, type UnscramblePlayer,
 } from "@shared/schema";
 
@@ -15,6 +16,10 @@ export interface IStorage {
   getPlayersByRoom(roomId: string): Promise<GamePlayer[]>;
   getPlayer(id: string): Promise<GamePlayer | undefined>;
   updatePlayer(id: string, data: Partial<GamePlayer>): Promise<GamePlayer | undefined>;
+  resetPlayersForRoom(roomId: string): Promise<void>;
+
+  getRankingsByRoom(roomId: string): Promise<GameRanking[]>;
+  upsertRanking(roomId: string, playerName: string): Promise<GameRanking>;
 
   createUnscrambleRoom(room: InsertUnscrambleRoom): Promise<UnscrambleRoom>;
   getUnscrambleRoom(id: string): Promise<UnscrambleRoom | undefined>;
@@ -58,6 +63,32 @@ export class DatabaseStorage implements IStorage {
   async updatePlayer(id: string, data: Partial<GamePlayer>): Promise<GamePlayer | undefined> {
     const [updated] = await db.update(gamePlayers).set(data).where(eq(gamePlayers.id, id)).returning();
     return updated;
+  }
+
+  async resetPlayersForRoom(roomId: string): Promise<void> {
+    await db.update(gamePlayers).set({ wordsFound: [] }).where(eq(gamePlayers.roomId, roomId));
+  }
+
+  async getRankingsByRoom(roomId: string): Promise<GameRanking[]> {
+    return db.select().from(gameRankings).where(eq(gameRankings.roomId, roomId));
+  }
+
+  async upsertRanking(roomId: string, playerName: string): Promise<GameRanking> {
+    const [existing] = await db.select().from(gameRankings)
+      .where(and(eq(gameRankings.roomId, roomId), eq(gameRankings.playerName, playerName)));
+
+    if (existing) {
+      const [updated] = await db.update(gameRankings)
+        .set({ wins: existing.wins + 1 })
+        .where(eq(gameRankings.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db.insert(gameRankings)
+      .values({ roomId, playerName, wins: 1 })
+      .returning();
+    return created;
   }
 
   async createUnscrambleRoom(room: InsertUnscrambleRoom): Promise<UnscrambleRoom> {

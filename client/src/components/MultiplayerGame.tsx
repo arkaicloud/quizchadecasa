@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { apiRequest } from '@/lib/api';
 import { cellKey, PlacedWord } from '@/lib/wordSearchGenerator';
+import { generateWordSearch } from '@/lib/wordSearchGenerator';
+import { getRandomWordsForTheme, WORD_THEMES } from '@/lib/wordThemes';
 import WordGrid from '@/components/WordGrid';
 import WordList from '@/components/WordList';
 import GameTimer from '@/components/GameTimer';
 import Confetti from '@/components/Confetti';
-import { Search, Trophy, Clock, RotateCcw, Users, Medal, Crown } from 'lucide-react';
+import { Search, Trophy, Clock, RotateCcw, Users, Medal, Crown, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const GAME_DURATION = 300;
@@ -16,6 +18,7 @@ interface MultiplayerGameProps {
   playerName: string;
   isAdmin: boolean;
   onBackToLobby: () => void;
+  onContinue: () => void;
 }
 
 interface PlayerProgress {
@@ -25,12 +28,19 @@ interface PlayerProgress {
   isAdmin: boolean;
 }
 
+interface RankingEntry {
+  id: string;
+  playerName: string;
+  wins: number;
+}
+
 const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
   roomId,
   playerId,
   playerName,
   isAdmin,
   onBackToLobby,
+  onContinue,
 }) => {
   const [grid, setGrid] = useState<string[][]>([]);
   const [placedWords, setPlacedWords] = useState<PlacedWord[]>([]);
@@ -41,6 +51,10 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
   const [players, setPlayers] = useState<PlayerProgress[]>([]);
   const [timerKey, setTimerKey] = useState(0);
   const [showRanking, setShowRanking] = useState(false);
+  const [rankings, setRankings] = useState<RankingEntry[]>([]);
+  const [theme, setTheme] = useState('');
+  const [roundNumber, setRoundNumber] = useState(1);
+  const [continuing, setContinuing] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +63,8 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
         setGrid(room.grid as any);
         setPlacedWords(room.placedWords as any);
         setWords(room.words as string[]);
+        setTheme(room.theme || '');
+        setRoundNumber(room.roundNumber || 1);
         if (room.status === 'finished') {
           setGameOver(true);
           setWinnerName(room.winnerName);
@@ -59,29 +75,38 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
 
         const me = playerData?.find((p: any) => p.id === playerId);
         if (me) setFoundWords(new Set(me.wordsFound || []));
+
+        const rankingData = await apiRequest('GET', `/api/rooms/${roomId}/rankings`);
+        setRankings(rankingData);
       } catch {}
     };
     load();
   }, [roomId, playerId]);
 
   useEffect(() => {
-    if (gameOver) return;
-
     const interval = setInterval(async () => {
       try {
+        const room = await apiRequest('GET', `/api/rooms/${roomId}`);
+
+        if (gameOver && room.status === 'waiting') {
+          onContinue();
+          return;
+        }
+
         const playerData = await apiRequest('GET', `/api/rooms/${roomId}/players`);
         setPlayers(playerData);
 
-        const room = await apiRequest('GET', `/api/rooms/${roomId}`);
-        if (room.status === 'finished') {
+        if (room.status === 'finished' && !gameOver) {
           setGameOver(true);
           setWinnerName(room.winnerName);
+          const rankingData = await apiRequest('GET', `/api/rooms/${roomId}/rankings`);
+          setRankings(rankingData);
         }
       } catch {}
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [roomId, gameOver]);
+  }, [roomId, gameOver, onContinue]);
 
   const foundCells = useMemo(() => {
     const cells = new Set<string>();
@@ -118,9 +143,32 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
     }
   }, [gameOver, isAdmin, roomId]);
 
+  const handleContinue = async () => {
+    if (!theme) return;
+    setContinuing(true);
+    try {
+      const newWords = getRandomWordsForTheme(theme);
+      const gameData = generateWordSearch(newWords, 12);
+      await apiRequest('POST', `/api/rooms/${roomId}/continue`, {
+        grid: gameData.grid,
+        placedWords: gameData.placedWords,
+        words: newWords,
+      });
+      onContinue();
+    } catch {
+      setContinuing(false);
+    }
+  };
+
   const rankedPlayers = useMemo(() => {
     return [...players].sort((a, b) => (b.wordsFound?.length || 0) - (a.wordsFound?.length || 0));
   }, [players]);
+
+  const sortedRankings = useMemo(() => {
+    return [...rankings].sort((a, b) => b.wins - a.wins);
+  }, [rankings]);
+
+  const themeName = WORD_THEMES.find(t => t.id === theme)?.name || theme;
 
   if (!grid.length) {
     return (
@@ -142,7 +190,7 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
               Caça-Palavras
             </h1>
             <p className="text-xs text-muted-foreground font-body">
-              Sala: <span className="text-primary font-semibold">{roomId}</span> · {playerName}
+              Sala: <span className="text-primary font-semibold">{roomId}</span> · {playerName} · Tema: {themeName} · Rodada {roundNumber}
             </p>
           </div>
         </div>
@@ -258,14 +306,28 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
                       <Medal className="w-5 h-5" />
                       Ver Ranking
                     </Button>
+
+                    {isAdmin && (
+                      <Button
+                        data-testid="button-continue"
+                        onClick={handleContinue}
+                        disabled={continuing}
+                        variant="secondary"
+                        className="w-full gap-2 font-display font-semibold py-5"
+                      >
+                        <Play className="w-5 h-5" />
+                        {continuing ? 'Preparando...' : 'Continuar (Nova Rodada)'}
+                      </Button>
+                    )}
+
                     <Button
                       data-testid="button-back-lobby"
                       onClick={onBackToLobby}
-                      variant="secondary"
-                      className="w-full gap-2 font-display font-semibold py-5"
+                      variant="ghost"
+                      className="w-full gap-2 font-body text-muted-foreground"
                     >
                       <RotateCcw className="w-5 h-5" />
-                      Voltar ao Lobby
+                      Voltar ao Menu
                     </Button>
                   </div>
                 </>
@@ -278,7 +340,9 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
                     </h2>
                   </div>
 
-                  <ul className="space-y-2 mb-6">
+                  <p className="text-xs text-muted-foreground font-body mb-3">Rodada {roundNumber} · Tema: {themeName}</p>
+
+                  <ul className="space-y-2 mb-4">
                     {rankedPlayers.map((p, index) => {
                       const medalColors = ['text-yellow-400', 'text-gray-400', 'text-amber-600'];
                       return (
@@ -315,14 +379,62 @@ const MultiplayerGame: React.FC<MultiplayerGameProps> = ({
                     })}
                   </ul>
 
-                  <Button
-                    data-testid="button-back-lobby"
-                    onClick={onBackToLobby}
-                    className="w-full gap-2 font-display font-bold text-lg py-6"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                    Voltar ao Lobby
-                  </Button>
+                  {sortedRankings.length > 0 && (
+                    <div className="border-t border-border pt-4 mb-4">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <Trophy className="w-5 h-5 text-primary" />
+                        <h3 className="font-display font-bold text-lg text-foreground">
+                          Ranking da Sala
+                        </h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-body mb-2">Vitórias acumuladas nesta sala</p>
+                      <ul className="space-y-2">
+                        {sortedRankings.map((r, index) => (
+                          <li
+                            key={r.id}
+                            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                              index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-muted/30'
+                            }`}
+                            data-testid={`room-ranking-${index}`}
+                          >
+                            <span className="font-display font-bold text-sm w-5 text-center text-muted-foreground">
+                              {index === 0 ? '👑' : `${index + 1}`}
+                            </span>
+                            <span className="font-body text-sm text-foreground flex-1 text-left">
+                              {r.playerName}
+                            </span>
+                            <span className="font-display font-bold text-sm text-primary">
+                              {r.wins} {r.wins === 1 ? 'vitória' : 'vitórias'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {isAdmin && (
+                      <Button
+                        data-testid="button-continue-ranking"
+                        onClick={handleContinue}
+                        disabled={continuing}
+                        className="w-full gap-2 font-display font-bold text-lg py-6"
+                      >
+                        <Play className="w-5 h-5" />
+                        {continuing ? 'Preparando...' : 'Continuar (Nova Rodada)'}
+                      </Button>
+                    )}
+
+                    <Button
+                      data-testid="button-back-lobby"
+                      onClick={onBackToLobby}
+                      variant={isAdmin ? "secondary" : "default"}
+                      className="w-full gap-2 font-display font-semibold py-5"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                      Voltar ao Menu
+                    </Button>
+                  </div>
                 </>
               )}
             </div>

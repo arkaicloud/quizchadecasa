@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiRequest } from '@/lib/api';
+import { WORD_THEMES } from '@/lib/wordThemes';
 import { Button } from '@/components/ui/button';
 import { Users, Play, Copy, Check } from 'lucide-react';
 
@@ -28,19 +29,24 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const [players, setPlayers] = useState<Player[]>([]);
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [theme, setTheme] = useState('');
+  const [roundNumber, setRoundNumber] = useState(1);
   const onGameStartRef = useRef(onGameStart);
   onGameStartRef.current = onGameStart;
 
   const joinUrl = `${window.location.origin}?room=${roomId}`;
 
   useEffect(() => {
-    const fetchPlayers = async () => {
+    const fetchData = async () => {
       try {
         const data = await apiRequest('GET', `/api/rooms/${roomId}/players`);
         setPlayers(data);
+        const room = await apiRequest('GET', `/api/rooms/${roomId}`);
+        setTheme(room.theme || '');
+        setRoundNumber(room.roundNumber || 1);
       } catch {}
     };
-    fetchPlayers();
+    fetchData();
   }, [roomId]);
 
   useEffect(() => {
@@ -50,6 +56,8 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
         setPlayers(data);
 
         const room = await apiRequest('GET', `/api/rooms/${roomId}`);
+        setTheme(room.theme || '');
+        setRoundNumber(room.roundNumber || 1);
         if (room.status === 'playing') {
           onGameStartRef.current();
         }
@@ -58,6 +66,9 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
     return () => clearInterval(interval);
   }, [roomId]);
+
+  const themeName = WORD_THEMES.find(t => t.id === theme)?.name || theme;
+  const themeIcon = WORD_THEMES.find(t => t.id === theme)?.icon || '🎯';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(joinUrl);
@@ -76,6 +87,11 @@ const WaitingRoom: React.FC<WaitingRoomProps> = ({
         <div className="text-center mb-6">
           <Users className="w-12 h-12 text-primary mx-auto mb-3" />
           <h1 className="font-display font-bold text-2xl text-foreground mb-1">Sala de Espera</h1>
+          {theme && (
+            <p className="font-display font-semibold text-primary text-sm mb-1" data-testid="text-theme-info">
+              {themeIcon} {themeName} · Rodada {roundNumber}
+            </p>
+          )}
           <p className="text-muted-foreground font-body text-sm">
             {isAdmin ? 'Aguardando jogadores...' : 'Aguardando o admin iniciar...'}
           </p>

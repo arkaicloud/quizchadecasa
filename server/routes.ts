@@ -11,6 +11,7 @@ export function registerRoutes(app: Express): void {
         placedWords: body.placedWords,
         words: body.words,
         status: "waiting",
+        theme: body.theme || "familia",
       } as InsertGameRoom);
       res.json(room);
     } catch (e: any) {
@@ -33,6 +34,42 @@ export function registerRoutes(app: Express): void {
       const room = await storage.updateRoom(req.params.id, req.body as any);
       if (!room) return res.status(404).json({ error: "Room not found" });
       res.json(room);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/rooms/:id/continue", async (req, res) => {
+    try {
+      const body = req.body as any;
+      const room = await storage.getRoom(req.params.id);
+      if (!room) return res.status(404).json({ error: "Room not found" });
+
+      if (room.winnerName) {
+        await storage.upsertRanking(req.params.id, room.winnerName);
+      }
+
+      await storage.resetPlayersForRoom(req.params.id);
+
+      const updated = await storage.updateRoom(req.params.id, {
+        grid: body.grid,
+        placedWords: body.placedWords,
+        words: body.words,
+        status: "waiting",
+        winnerName: null,
+        roundNumber: (room.roundNumber || 1) + 1,
+      });
+
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/rooms/:id/rankings", async (req, res) => {
+    try {
+      const rankings = await storage.getRankingsByRoom(req.params.id);
+      res.json(rankings);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

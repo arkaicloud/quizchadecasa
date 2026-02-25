@@ -65,6 +65,10 @@ const Index = () => {
     setIsAdmin(false);
   }, []);
 
+  const handleContinue = useCallback(() => {
+    setPhase('waiting');
+  }, []);
+
   if (phase === 'menu') {
     return <MainMenu onSelectGame={handleSelectGame} />;
   }
@@ -91,6 +95,7 @@ const Index = () => {
         playerName={playerName}
         isAdmin={isAdmin}
         onBackToLobby={handleBackToMenu}
+        onContinue={handleContinue}
       />
     );
   }
